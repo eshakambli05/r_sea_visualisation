@@ -89,6 +89,14 @@ pdf("country_analysis_plots.pdf", width=10, height=8)
 # [All plotting code here]
 dev.off()
 
+# Save each plot as high-quality PNG
+ggsave("plot1_top10_confirmed.png",  p1, width = 10, height = 6, dpi = 300)
+ggsave("plot2_deaths_vs_confirmed.png", p2, width = 10, height = 7, dpi = 300)
+ggsave("plot3_recovery_rate.png",       p3, width = 9,  height = 6, dpi = 300)
+ggsave("plot4_top10_active.png",       p4, width = 10, height = 6, dpi = 300)
+ggsave("plot5_weekly_growth.png",      p5, width = 10, height = 7, dpi = 300)
+
+
 
 
 
