@@ -103,3 +103,6 @@ if ("1 week change" %in% names(df) && "Confirmed last week" %in% names(df)) {
          y="1 Week Change")
 }
 
+
+
+
