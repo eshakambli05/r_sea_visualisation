@@ -1,83 +1,105 @@
-# ----------------------------------------------------
-#   R ANALYSIS FOR country_wise_latest.csv
-#   Generates: visualizations_from_r.pdf
-# ----------------------------------------------------
+# Install required packages if not already installed
+if(!require(tidyverse)) install.packages("tidyverse")
+if(!require(ggplot2)) install.packages("ggplot2")
+if(!require(readr)) install.packages("readr")
+if(!require(scales)) install.packages("scales")
+if(!require(reshape2)) install.packages("reshape2")
 
-library(readr)
-library(dplyr)
+library(tidyverse)
 library(ggplot2)
+library(readr)
+library(scales)
+library(reshape2)
 
-# ---- Load Data ----
+# --------------------------------------------
+# 1. READ DATA
+# --------------------------------------------
 df <- read_csv("country_wise_latest.csv")
 
-# ---- Check column names ----
-print(names(df))
-
-# IMPORTANT:
-# Update these column names if your CSV uses different headers.
-country_col <- "Country/Region"   # change if needed
-total_cases_col <- "Confirmed"
-total_deaths_col <- "Deaths"
-total_recovered_col <- "Recovered"
-new_cases_col <- "New cases"
-
-# Convert numeric columns (avoid factors)
-df[[total_cases_col]] <- as.numeric(df[[total_cases_col]])
-df[[total_deaths_col]] <- as.numeric(df[[total_deaths_col]])
-df[[total_recovered_col]] <- as.numeric(df[[total_recovered_col]])
-df[[new_cases_col]] <- as.numeric(df[[new_cases_col]])
-
-# ---- Create PDF with plots ----
-pdf("visualizations_from_r.pdf", width = 8, height = 6)
-
-# 1. Top 10 countries by cases
-top_cases <- df %>% 
-  arrange(desc(.data[[total_cases_col]])) %>%
-  slice(1:10)
-
-print(
-  ggplot(top_cases,
-         aes(x = reorder(.data[[country_col]], .data[[total_cases_col]]),
-             y = .data[[total_cases_col]])) +
-    geom_col(fill = "steelblue") +
-    coord_flip() +
-    labs(title = "Top 10 Countries by Confirmed Cases",
-         x = "Country",
-         y = "Confirmed Cases")
-)
-
-# 2. Scatter plot: Deaths vs Cases (log scale helps)
-print(
-  ggplot(df, aes(x = .data[[total_cases_col]], y = .data[[total_deaths_col]])) +
-    geom_point(alpha = 0.6) +
-    scale_x_log10() +
-    scale_y_log10() +
-    labs(title = "Deaths vs Confirmed Cases (log scale)",
-         x = "Confirmed Cases",
-         y = "Deaths")
-)
-
-# 3. Histogram of new cases
-print(
-  ggplot(df, aes(x = .data[[new_cases_col]])) +
-    geom_histogram(bins = 30, fill = "tomato") +
-    labs(title = "Distribution of New Cases",
-         x = "New Cases",
-         y = "Frequency")
-)
-
-# 4. Boxplots for main numeric columns
-num_cols <- c(total_cases_col, total_deaths_col, total_recovered_col)
+# --------------------------------------------
+# 2. CLEAN NUMERIC COLUMNS
+# --------------------------------------------
+num_cols <- c("Confirmed", "Deaths", "Recovered", "Active", 
+              "New cases", "New deaths", "New recovered",
+              "Deaths / 100 Cases", "Recovered / 100 Cases",
+              "Deaths / 100 Recovered", "Confirmed last week",
+              "1 week change", "1 week % increase")
 
 for (col in num_cols) {
-  print(
-    ggplot(df, aes(y = .data[[col]])) +
-      geom_boxplot(fill = "skyblue") +
-      labs(title = paste("Boxplot of", col),
-           y = col)
-  )
+  if (col %in% names(df)) {
+    df[[col]] <- as.numeric(df[[col]])
+  }
 }
 
-dev.off()
+# Automatically detect "Country" column
+country_col <- names(df)[str_detect(names(df), regex("country", ignore_case = TRUE))][1]
+if (is.na(country_col)) {
+  country_col <- "Country"
+}
 
-cat("PDF created: visualizations_from_r.pdf\n")
+# --------------------------------------------
+# 3. PLOT 1 – TOP 10 COUNTRIES BY CONFIRMED CASES
+# --------------------------------------------
+top10_cases <- df %>% 
+  arrange(desc(Confirmed)) %>% 
+  slice(1:10)
+
+ggplot(top10_cases, aes(x = reorder(!!sym(country_col), Confirmed), y = Confirmed)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  labs(title="Top 10 Countries by Confirmed Cases",
+       x="Country", y="Confirmed Cases")
+
+# --------------------------------------------
+# 4. PLOT 2 – DEATHS vs CONFIRMED CASES
+# --------------------------------------------
+ggplot(df, aes(x = Confirmed, y = Deaths)) +
+  geom_point(color="red", alpha=0.6) +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  labs(title="Deaths vs Confirmed Cases",
+       x="Confirmed Cases", y="Deaths")
+
+# --------------------------------------------
+# 5. PLOT 3 – RECOVERY RATE DISTRIBUTION
+# --------------------------------------------
+if ("Recovered / 100 Cases" %in% names(df)) {
+  ggplot(df, aes(x = `Recovered / 100 Cases`)) +
+    geom_histogram(bins = 20, fill="green", color="black") +
+    theme_minimal() +
+    labs(title="Distribution of Recovery Rate (%)",
+         x="Recovery Rate (%)", y="Frequency")
+}
+
+# --------------------------------------------
+# 6. PLOT 4 – TOP 10 COUNTRIES BY ACTIVE CASES
+# --------------------------------------------
+top10_active <- df %>% 
+  arrange(desc(Active)) %>% 
+  slice(1:10)
+
+ggplot(top10_active, aes(x = reorder(!!sym(country_col), Active), y = Active)) +
+  geom_bar(stat="identity", fill="orange") +
+  coord_flip() +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  labs(title="Top 10 Countries by Active Cases",
+       x="Country", y="Active Cases")
+
+# --------------------------------------------
+# 7. PLOT 5 – WEEKLY CHANGE VS CONFIRMED LAST WEEK
+# --------------------------------------------
+if ("1 week change" %in% names(df) && "Confirmed last week" %in% names(df)) {
+  ggplot(df, aes(x = `Confirmed last week`, y = `1 week change`)) +
+    geom_point(color="purple", alpha=0.6) +
+    scale_x_continuous(labels = comma) +
+    scale_y_continuous(labels = comma) +
+    theme_minimal() +
+    labs(title="1 Week Change vs Confirmed Last Week",
+         x="Confirmed Last Week",
+         y="1 Week Change")
+}
+
