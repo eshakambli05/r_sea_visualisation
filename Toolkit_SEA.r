@@ -1,3 +1,5 @@
+#Esha Kambli
+#2301
 # Install required packages if not already installed
 if(!require(tidyverse)) install.packages("tidyverse")
 if(!require(ggplot2)) install.packages("ggplot2")
@@ -102,6 +104,7 @@ if ("1 week change" %in% names(df) && "Confirmed last week" %in% names(df)) {
          x="Confirmed Last Week",
          y="1 Week Change")
 }
+
 
 
 
